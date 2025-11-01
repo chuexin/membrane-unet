@@ -1,5 +1,5 @@
 from __future__ import print_function
-from keras.preprocessing.image import ImageDataGenerator
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import numpy as np 
 import os
 import glob
@@ -89,7 +89,7 @@ def testGenerator(test_path,num_image = 30,target_size = (256,256),flag_multi_cl
         img = trans.resize(img,target_size)
         img = np.reshape(img,img.shape+(1,)) if (not flag_multi_class) else img
         img = np.reshape(img,(1,)+img.shape)
-        yield img
+        yield (img,)
 
 
 def geneTrainNpy(image_path,mask_path,flag_multi_class = False,num_class = 2,image_prefix = "image",mask_prefix = "mask",image_as_gray = True,mask_as_gray = True):
@@ -117,8 +117,16 @@ def labelVisualize(num_class,color_dict,img):
     return img_out / 255
 
 
+def saveResult(save_path, npyfile, flag_multi_class=False, num_class=2):
+    for i, item in enumerate(npyfile):
+        img = labelVisualize(num_class, COLOR_DICT, item) if flag_multi_class else item[:, :, 0]
 
-def saveResult(save_path,npyfile,flag_multi_class = False,num_class = 2):
-    for i,item in enumerate(npyfile):
-        img = labelVisualize(num_class,COLOR_DICT,item) if flag_multi_class else item[:,:,0]
-        io.imsave(os.path.join(save_path,"%d_predict.png"%i),img)
+        # --- 添加这些行来进行转换 ---
+        img[img > 0.5] = 1
+        img[img <= 0.5] = 0
+
+        # 关键一步：将 0/1 转换为 0/255 并指定为8位整数
+        img = (img * 255).astype(np.uint8)
+        # --- 结束 ---
+
+        io.imsave(os.path.join(save_path, "%d_predict.png" % i), img)
